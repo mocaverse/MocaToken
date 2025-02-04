@@ -22,7 +22,7 @@ import "forge-std/Script.sol";
         LZ delegate: 0x84Db3d1de9a43Aa144C21b248AD31a1c83d8334D
         operator: no operators have been set
 
-        ** only set peers and enforced options called for polygonOFT **
+        ** only set peers and enforced options called for baseOFT **
 
     2. deploy OFT on base[owner/delegate: deployer]
     3. setPeers 
@@ -42,8 +42,8 @@ abstract contract LZState is LZMainnets {
     string public symbol = "MOCA";
 
     // treasury
-    address public DAT_ADDRESS = address(0); // note: fill-in 
-    address public OWNER_MULTISIG = address(0); // note: fill-in
+    address public DAT_ADDRESS = 0x228e0f99adf8bf367100BBFD9b090Bc0b15c89a9;     // note: supplied by DAT 
+    address public OWNER_MULTISIG = 0x869dF055A67669D0d8CfA590dBFAa86fF48B7eac;  // note: supplied by DAT
 
     function setUp() public {
 
@@ -75,6 +75,8 @@ contract DeployElsewhere is LZState {
         address delegate = DEPLOYER_ADDRESS;
         address owner = DEPLOYER_ADDRESS;
 
+        console2.log("remoteLzEP", remoteLzEP);
+
         MocaOFT remoteOFT = new MocaOFT(name, symbol, remoteLzEP, delegate, owner);
     }
 }
@@ -90,7 +92,7 @@ abstract contract State is LZState {
     address public mocaTokenAdapterAddress = address(0x2B11834Ed1FeAEd4b4b3a86A6F571315E25A884D);                     
 
     // remote
-    address public mocaOFTAddress = address(0); // note: fill-in after deployment
+    address public mocaOFTAddress = address(0x2B11834Ed1FeAEd4b4b3a86A6F571315E25A884D); // note: fill-in after deployment
 
     // set contracts
     MocaToken public mocaToken = MocaToken(mocaTokenAddress);
@@ -203,13 +205,13 @@ contract WhitelistDATOnRemote is State {
         address public layerZero_mainnet = 0x589dEDbD617e0CBcB916A9223F4d1300c294236b;
         address public layerZero_base = 0x9e059a54699a285714207b43B055483E78FAac25;
         
-        // same address for both mainnet and polygon
+        // same address for both mainnet and base
         address public gcp = 0xD56e4eAb23cb81f43168F9F45211Eb027b9aC7cc;
         
         // note: cannot use animocadvn; since it does not support base
         // note: lz docs were incorrect; refer to Kelly's answer
-        address public bitgo_mainnet = 0xc9ca319f6da263910fd9b037ec3d817a814ef3d8;
-        address public bitgo_base = 0x133e9fb2d339d8428476a714b1113b024343811e;
+        address public bitgo_mainnet = 0xc9ca319f6Da263910fd9B037eC3d817A814ef3d8;
+        address public bitgo_base = 0x133e9fB2D339D8428476A714B1113B024343811E;
         
         address public nethermind_mainnet = 0xa59BA433ac34D2927232918Ef5B2eaAfcF130BA5;
         address public nethermind_base = 0xcd37CA043f8479064e10635020c65FfC005d36f6;
@@ -287,9 +289,9 @@ contract WhitelistDATOnRemote is State {
                 ulnConfig.requiredDVNCount = 4; 
                 address[] memory requiredDVNs = new address[](ulnConfig.requiredDVNCount); 
                     // no duplicates. sorted an an ascending order.
-                    requiredDVNs[0] = bitgo_mainnet;
-                    requiredDVNs[1] = layerZero_mainnet;
-                    requiredDVNs[2] = nethermind_mainnet;
+                    requiredDVNs[0] = layerZero_mainnet;
+                    requiredDVNs[1] = nethermind_mainnet;
+                    requiredDVNs[2] = bitgo_mainnet;
                     requiredDVNs[3] = gcp;
                     
                 ulnConfig.requiredDVNs = requiredDVNs;
@@ -317,7 +319,7 @@ contract WhitelistDATOnRemote is State {
         }
     }
 
-    // forge script script/DeployBaseLive.s.sol:SetDvnEthSend --rpc-url mainnet --broadcast -vvvv 
+    // forge script script/Base/DeployBaseLive.s.sol:SetDvnEthSend --rpc-url mainnet --broadcast -vvvv 
 
     
     contract SetDvnBaseReceive is DvnData {
@@ -370,7 +372,7 @@ contract WhitelistDATOnRemote is State {
     }
     
 
-    // forge script script/DeployBaseLive.s.sol:SetDvnBaseReceive --rpc-url base --broadcast -vvvv 
+    // forge script script/Base/DeployBaseLive.s.sol:SetDvnBaseReceive --rpc-url base --broadcast -vvvv 
 
 
     // ------------------------------------------- BaseSend_EthReceive -------------------------
@@ -380,7 +382,7 @@ contract WhitelistDATOnRemote is State {
         it’s not deterministic since we don’t know when the blob data will be included in L1 block. 
         finalization time: 5-10 minutes + ETH 
             Base block time: 2 seconds
-            10mis in blocks: (10*60) / 2 = 300 blocks
+            10mins in blocks: (10*60) / 2 = 300 blocks
         finalization blocks = 300 + ETH finalization blocks
                             = 315 blocks
      */
@@ -435,9 +437,9 @@ contract WhitelistDATOnRemote is State {
     }
     
 
-    // forge script script/DeployFinal.s.sol:SetDvnPolySend --rpc-url polygon --broadcast -vvvv 
-
+    // forge script script/Base/DeployBaseLive.s.sol:SetDvnBaseSend --rpc-url base --broadcast -vvvv 
     
+
     contract SetDvnEthReceive is DvnData {
 
         function run() public broadcast("PRIVATE_KEY_ACTUAL") {
@@ -445,7 +447,7 @@ contract WhitelistDATOnRemote is State {
             // ulnConfig struct
             UlnConfig memory ulnConfig; 
                 // confirmation on eth 
-                ulnConfig.confirmations = 768;      
+                ulnConfig.confirmations = 315;      
                 
                 // optional
                 //0 indicate DEFAULT, NIL_DVN_COUNT indicate NONE (to override the value of default)
@@ -457,9 +459,9 @@ contract WhitelistDATOnRemote is State {
                 ulnConfig.requiredDVNCount = 4; 
                 address[] memory requiredDVNs = new address[](ulnConfig.requiredDVNCount); 
                     // no duplicates. sorted an an ascending order.
-                    requiredDVNs[0] = bitgo_mainnet;
-                    requiredDVNs[1] = layerZero_mainnet;
-                    requiredDVNs[2] = nethermind_mainnet;
+                    requiredDVNs[0] = layerZero_mainnet;
+                    requiredDVNs[1] = nethermind_mainnet;
+                    requiredDVNs[2] = bitgo_mainnet;
                     requiredDVNs[3] = gcp;
                     
                 ulnConfig.requiredDVNs = requiredDVNs;
@@ -488,10 +490,10 @@ contract WhitelistDATOnRemote is State {
     }
     
 
-    // forge script script/DeployFinal.s.sol:SetDvnEthReceive --rpc-url mainnet --broadcast -vvvv 
+    // forge script script/Base/DeployBaseLive.s.sol:SetDvnEthReceive --rpc-url mainnet --broadcast -vvvv 
 
 
-// ------------------------------------------- Test: whitelisted address can send and receive -----------------------------------------
+// ----------------------------------- Test: whitelisted address can send and receive ------------------------------------
 
 import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
@@ -502,7 +504,7 @@ contract SendTokensToAway is State {
     function run() public broadcast("PRIVATE_KEY_ACTUAL") {
 
         // set approval for adaptor to spend tokens
-        mocaToken.approve(mocaTokenAdapterAddress, 10 ether);
+        //mocaToken.approve(mocaTokenAdapterAddress, 10 ether);
         
         bytes memory nullBytes = new bytes(0);
         SendParam memory sendParam = SendParam({
@@ -529,7 +531,7 @@ contract SendTokensToAway is State {
 contract SendTokensToHome is State {
 
     function run() public broadcast("PRIVATE_KEY_ACTUAL") {
-        
+
         bytes memory nullBytes = new bytes(0);
         SendParam memory sendParam = SendParam({
             dstEid: homeChainID,                                                                 // Destination endpoint ID.
