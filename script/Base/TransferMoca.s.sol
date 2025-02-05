@@ -27,4 +27,4 @@ contract TransferMoca is Script {
     }
 }
 
-// forge script script/Base/TransferMoca.s.sol:TransferMoca --rpc-url mainnet
+// forge script script/Base/TransferMoca.s.sol:TransferMoca --rpc-url mainnet --broadcast
