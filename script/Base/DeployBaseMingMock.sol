@@ -30,11 +30,19 @@ abstract contract LZState is LZTestnets {
     }
 }
 
-/*
+
 contract DeployHome is LZState {
-    function run() public {
+
+    function run() public broadcast("PRIVATE_KEY_TEST") {
+
+        address mocaTokenAddress = address(0x5667424802Ef74C314e7adbBa6fA669999d8137D);
+        address delegate = DEPLOYER_ADDRESS;
+        address owner = DEPLOYER_ADDRESS;
+
+        MocaTokenAdapter mocaTokenAdapter = new MocaTokenAdapter(mocaTokenAddress, homeLzEP, delegate, owner);
     }
-}*/
+}
+// forge script script/Base/DeployBaseMingMock.sol:DeployHome --rpc-url sepolia --broadcast --verify -vvvv --etherscan-api-key sepolia
 
 //Remote
 contract DeployElsewhere is LZState {
@@ -53,17 +61,17 @@ contract DeployElsewhere is LZState {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:DeployElsewhere --rpc-url base_sepolia --broadcast --verify -vvvv --etherscan-api-key base_sepolia
+// forge script script/Base/DeployBaseMingMock.sol:DeployElsewhere --rpc-url base_sepolia --broadcast --verify -vvvv --etherscan-api-key base_sepolia
 
 // note: update addresses in State
 abstract contract State is LZState {
     
     // home: note uses MocaTokenMock for free mints 
     address public mocaTokenAddress = address(0x5667424802Ef74C314e7adbBa6fA669999d8137D);    
-    address public mocaTokenAdapterAddress = address(0x859eba9f58873d9284ccd211611494ED9D842204);                     
+    address public mocaTokenAdapterAddress = address(0x03f78AF82816a4fa4E976Aad07319aB7A3bDc889);                     
 
     // remote
-    address public mocaOFTAddress = address(0xB35a100EAC70fFc06A7e9A2a5dc94B3AC3213c68);
+    address public mocaOFTAddress = address(0x012fA6C1295278F922D8ca0C5c770cf32dDDbF26);
 
     // set contracts
     MocaTokenMock public mocaToken = MocaTokenMock(mocaTokenAddress);
@@ -84,7 +92,7 @@ contract SetRemoteOnHome is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:SetRemoteOnHome --rpc-url sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:SetRemoteOnHome --rpc-url sepolia --broadcast -vvvv 
 
 contract SetRemoteOnAway is State {
 
@@ -97,7 +105,7 @@ contract SetRemoteOnAway is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:SetRemoteOnAway --rpc-url base_sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:SetRemoteOnAway --rpc-url base_sepolia --broadcast -vvvv 
 
 // ------------------------------------------- Gas Limits -------------------------
 
@@ -120,7 +128,7 @@ contract SetGasLimitsHome is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:SetGasLimitsHome --rpc-url sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:SetGasLimitsHome --rpc-url sepolia --broadcast -vvvv 
 
 contract SetGasLimitsAway is State {
 
@@ -139,7 +147,31 @@ contract SetGasLimitsAway is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:SetGasLimitsAway --rpc-url base_sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:SetGasLimitsAway --rpc-url base_sepolia --broadcast -vvvv 
+
+// ------------------------------------------- Set Rate Limits  -----------------------------------------
+
+contract SetRateLimitsHome is State {
+
+    function run() public broadcast("PRIVATE_KEY_TEST") {
+        
+        mocaTokenAdapter.setOutboundLimit(remoteChainID, 100_000_000 ether);
+        mocaTokenAdapter.setInboundLimit(remoteChainID, 100_000_000 ether);
+    }
+}
+
+// forge script script/Base/DeployBaseMingMock.sol:SetRateLimitsHome --rpc-url sepolia --broadcast -vvvv 
+
+contract SetRateLimitsRemote is State {
+
+    function run() public broadcast("PRIVATE_KEY_TEST") {
+
+        mocaOFT.setOutboundLimit(homeChainID, 100_000_000 ether);
+        mocaOFT.setInboundLimit(homeChainID, 100_000_000 ether);
+    }
+}
+
+// forge script script/Base/DeployBaseMingMock.sol:SetRateLimitsRemote --rpc-url base_sepolia --broadcast -vvvv 
 
 // ------------------------------------------- Whitelisting Treasury  -----------------------------------------
 
@@ -155,7 +187,7 @@ contract whitelistTreasuryOnHome is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:whitelistTreasuryOnHome --rpc-url sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:whitelistTreasuryOnHome --rpc-url sepolia --broadcast -vvvv 
 
 
 contract whitelistTreasuryOnRemote is State {
@@ -167,15 +199,21 @@ contract whitelistTreasuryOnRemote is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:whitelistTreasuryOnRemote --rpc-url base_sepolia --broadcast -vvvv 
+// forge script script/Base/DeployBaseMingMock.sol:whitelistTreasuryOnRemote --rpc-url base_sepolia --broadcast -vvvv 
 
-// ------------------------------------------- Test Whitelisted Sending Tokens  -----------------------------------------
 
-contract TestWhitelistSendingTokens is State {
+// ------------------------------------------- Send sum tokens  -------------------------
 
-    function run() public broadcast("PRIVATE_KEY_TEST") {
+// SendParam
+import "node_modules/@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import { MessagingParams, MessagingFee, MessagingReceipt } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+
+contract SendTokensToAway is State {
+
+    function run() public broadcast("PRIVATE_KEY_TEST")  {
+
         //set approval for adaptor to spend tokens
-        //mocaToken.approve(mocaTokenAdapterAddress, 10 ether);
+        mocaToken.approve(mocaTokenAdapterAddress, 1 ether);
         
         bytes memory nullBytes = new bytes(0);
         SendParam memory sendParam = SendParam({
@@ -196,45 +234,38 @@ contract TestWhitelistSendingTokens is State {
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:TestWhitelistSendingTokens --rpc-url sepolia --broadcast -vvvv 
+//  forge script script/Base/DeployBaseMingMock.sol:SendTokensToAway --rpc-url sepolia --broadcast -vvvv
 
-// ------------------------------------------- Set Rate Limits  -----------------------------------------
-
-/*
-contract SetRateLimitsHome is State {
+contract SendTokensToRemotePlusGas is State {
 
     function run() public broadcast("PRIVATE_KEY_TEST") {
+
+        //set approval for adaptor to spend tokens
+        mocaToken.approve(mocaTokenAdapterAddress, 1 ether);
         
-        mocaTokenAdapter.setOutboundLimit(remoteChainID, 10 ether);
-        mocaTokenAdapter.setInboundLimit(remoteChainID, 10 ether);
+        // createLzNativeDropOption
+        // gas: 6000000000000000 (amount of native gas to drop in wei)
+        // receiver: 0x000000000000000000000000de05a1abb121113a33eed248bd91ddc254d5e9db (address in bytes32)
+        bytes memory extraOptions = hex"0003010031020000000000000000001550f7dca70000000000000000000000000000de05a1abb121113a33eed248bd91ddc254d5e9db";
+
+        bytes memory nullBytes = new bytes(0);
+        SendParam memory sendParam = SendParam({
+            dstEid: remoteChainID,                                                                  // Destination endpoint ID.
+            to: bytes32(uint256(uint160(DEPLOYER_ADDRESS))),     // Recipient address.
+            amountLD: 1 ether,                                                                      // Amount to send in local decimals        
+            minAmountLD: 1 ether,                                                                   // Minimum amount to send in local decimals.
+            extraOptions: extraOptions,                                                             // Additional options supplied by the caller to be used in the LayerZero message.
+            composeMsg: nullBytes,                                                               // The composed message for the send() operation.
+            oftCmd: nullBytes                                                                    // The OFT command to be executed, unused in default OFT implementations.
+        });
+
+        // Fetching the native fee for the token send operation
+        MessagingFee memory messagingFee = mocaTokenAdapter.quoteSend(sendParam, false);
+
+        // send tokens xchain
+        mocaTokenAdapter.send{value: messagingFee.nativeFee}(sendParam, messagingFee, payable(DEPLOYER_ADDRESS));
+
     }
 }
 
-// forge script script/Base/DeployBaseTest.s.sol:SetRateLimitsHome --rpc-url sepolia --broadcast -vvvv 
-
-contract SetRateLimitsRemote is State {
-
-    function run() public broadcast("PRIVATE_KEY_TEST") {
-
-        mocaOFT.setOutboundLimit(homeChainID, 10 ether);
-        mocaOFT.setInboundLimit(homeChainID, 10 ether);
-    }
-}
-
-// forge script script/Base/DeployBaseTest.s.sol:SetRateLimitsRemote --rpc-url base_sepolia --broadcast -vvvv 
-
-*/
-
-// ------------------------------------------- DVN Config ------------------------------------------
-
-import { SetConfigParam } from "node_modules/@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLibManager.sol";
-import { UlnConfig } from "node_modules/@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/UlnBase.sol";
-import { ILayerZeroEndpointV2 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
-
-/**
-    note:
-    - set custom DVN configs
-    - setOwnerAsDelegate
-    - transferOwnership[home, remote]
-    - check that DAT team has accepted ownership, by calling `acceptOwnership()` on both home and remote
- */
+//  forge script script/Base/DeployBaseMingMock.sol:SendTokensToRemotePlusGas --rpc-url sepolia --broadcast -vvvv
